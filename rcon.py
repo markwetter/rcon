@@ -50,7 +50,7 @@ class RconPacket(object):
         return self
 
 
-class RconConnection(object):
+class RconClient(object):
     def __init__(self, host, port, password='', timeout=1.0):
         self.host = host
         self.port = port
