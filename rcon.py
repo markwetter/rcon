@@ -92,3 +92,22 @@ class RconClient(object):
         return response_buffer
 
 
+class RconServerHandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        # Echo Stub
+        request_packet = RconPacket().recieve_from_socket(self.request.socket)
+        request_packet.send_to_socket(self.request.socket)
+
+
+class RconServer(socketserver.ThreadingTCPServer):
+    def __init__(self, server_address=("localhost",27015), password=''):
+        socketserver.ThreadingTCPServer.__init__(self, server_address, RconServerHandler)
+        self.password = password
+
+    def start(self):
+        self.server_thread = threading.Thread(target=self.serve_forever)
+        self.server_thread.daemon = True
+        self.server_thread.start()
+
+    def stop(self):
+        self.shutdown()
