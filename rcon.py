@@ -3,6 +3,7 @@
 import socket
 import socketserver
 import threading
+import inspect
 import struct
 import itertools
 
@@ -66,7 +67,10 @@ class RconClient(object):
         packet.send_to_socket(self.socket)
 
     def recieve(self):
-        return RconPacket().recieve_from_socket(self.socket)
+        response_packet = RconPacket().recieve_from_socket(self.socket)
+        if not response_packet:
+            raise RconError("Remote server disconnected")
+        return response_packet
 
     def authenticate(self, password):
         auth_packet = RconPacket(next(self.packet_id), SERVERDATA_AUTH, password)
@@ -104,7 +108,8 @@ class RconServerHandler(socketserver.BaseRequestHandler):
             if not request_packet:
                 break
             if auth:
-                self.exec_command(request_packet)
+                response = self.exec_command(request_packet)
+                RconPacket(request_packet.packet_id, SERVERDATA_RESPONSE_VALUE, response).send_to_socket(self.request)
             else:
                 auth = self.authenticate(request_packet)
 
@@ -120,14 +125,25 @@ class RconServerHandler(socketserver.BaseRequestHandler):
             return False
 
     def exec_command(self, request_packet):
-        # Echo Stub
-        request_packet.send_to_socket(self.request)
+        print(request_packet.body)
+        request = request_packet.body.split()
+        if not request:
+            return ""
+        print(request)
+        function = request.pop(0)
+        if not function in self.server.funcs.keys():
+            return "Unknown command: %s" % function
+        (args, varargs, keywords, default) = inspect.getargspec(self.server.funcs[function])
+        if not len(args) == len(request):
+            return "Command %s requires %s arguments, %s arguments given" % (function, len(args), len(request))
+        return str(self.server.funcs[function](*request))
 
 
 class RconServer(socketserver.ThreadingTCPServer):
     def __init__(self, server_address=("localhost",27015), password=''):
         socketserver.ThreadingTCPServer.__init__(self, server_address, RconServerHandler)
         self.password = password
+        self.funcs = {}
 
     def start(self):
         self.server_thread = threading.Thread(target=self.serve_forever)
@@ -136,3 +152,7 @@ class RconServer(socketserver.ThreadingTCPServer):
 
     def stop(self):
         self.shutdown()
+
+    def register_function(self, function):
+        name = function.__name__
+        self.funcs[name] = function
