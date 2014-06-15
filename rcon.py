@@ -40,16 +40,12 @@ class RconPacket(object):
         header = socket.recv(struct.calcsize('<3i'))
         if not header:
             return False
-        (response_size, response_id, response_type) = struct.unpack('<3i', header)
-        response_size = response_size - struct.calcsize('<2i')
+        (content_length, self.packet_id, self.packet_type) = struct.unpack('<3i', header)
+        content_length = content_length - struct.calcsize('<2i')
         response_buffer = b''
-        while len(response_buffer) < response_size:
-            response_buffer += socket.recv(response_size - len(response_buffer))
-        response_body = response_buffer.decode('utf-8').rstrip('\x00')
-
-        self.packet_id = response_id
-        self.packet_type = response_type
-        self.body = response_body
+        while len(response_buffer) < content_length:
+            response_buffer += socket.recv(content_length - len(response_buffer))
+        self.body = response_buffer.decode('utf-8').rstrip('\x00')
 
         return self
 
