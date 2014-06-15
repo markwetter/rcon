@@ -15,6 +15,45 @@ class RconAuthenticationError(Exception):
     pass
 
 
+class RconPacket(object):
+    def __init__(self, packet_id=0, packet_type=0, body=''):
+        self.packet_id = packet_id
+        self.packet_type = packet_type
+        self.body = body
+
+    def __str__(self):
+        return self.body
+
+    def size(self):
+        return len(self.body)+10
+
+    def serialize(self):
+        header = struct.pack('<3i', self.size(), self.packet_id, self.packet_type)
+        return b"".join([header, self.body.encode('utf-8'), b"\x00\x00"])
+
+    def send_to_socket(self, socket):
+        if self.size() > 4096:
+            raise RconError('Packet size cannot exceed 4096 bytes')
+        socket.send(self.serialize())
+
+    def recieve_from_socket(self, socket):
+        header = socket.recv(struct.calcsize('<3i'))
+        if not header:
+            return False
+        (response_size, response_id, response_type) = struct.unpack('<3i', header)
+        response_size = response_size - struct.calcsize('<2i')
+        response_buffer = b''
+        while len(response_buffer) < response_size:
+            response_buffer += socket.recv(response_size - len(response_buffer))
+        response_body = response_buffer.decode('utf-8').rstrip('\x00')
+
+        self.packet_id = response_id
+        self.packet_type = response_type
+        self.body = response_body
+
+        return self
+
+
 class RconConnection(object):
     def __init__(self, host, port, password='', timeout=1.0):
         self.host = host
@@ -22,6 +61,12 @@ class RconConnection(object):
         self.packet_id = itertools.count(1)
         self.socket = socket.create_connection((host, port), timeout)
         self.authenticate(password)
+
+    def send(self, packet):
+        packet.send_to_socket(self.socket)
+
+    def recieve(self):
+        return RconPacket().recieve_from_socket(self.socket)
 
     def authenticate(self, password):
         auth_packet = RconPacket(next(self.packet_id), SERVERDATA_AUTH, password)
@@ -33,22 +78,6 @@ class RconConnection(object):
             raise RconError('Invalid authentication response type: %s' % auth_response.packet_type)
         if auth_response.packet_id == -1:
             raise RconAuthenticationError('Server Response: Invalid Password')
-
-    def send(self, packet):
-        if packet.size() > 4096:
-            raise RconError('Packet Size > 4096 bytes')
-        self.socket.send(packet.serialize())
-
-    def recieve(self):
-        header = self.socket.recv(struct.calcsize('<3i'))
-        (response_size, response_id, response_type) = struct.unpack('<3i', header)
-        response_size = response_size - struct.calcsize('<2i')
-        response_buffer = b''
-        while len(response_buffer) < response_size:
-            response_buffer += self.socket.recv(response_size - len(response_buffer))
-        response_body = response_buffer.decode('utf-8').rstrip('\x00')
-
-        return RconPacket(response_id, response_type, response_body)
 
     def exec_command(self, command):
         command_packet = RconPacket(next(self.packet_id), SERVERDATA_EXECCOMMAND, command)
@@ -67,18 +96,3 @@ class RconConnection(object):
         return response_buffer
 
 
-class RconPacket(object):
-    def __init__(self, packet_id, packet_type, body):
-        self.packet_id = packet_id
-        self.packet_type = packet_type
-        self.body = body
-
-    def __str__(self):
-        return self.body
-
-    def size(self):
-        return len(self.body)+10
-
-    def serialize(self):
-        header = struct.pack('<3i', self.size(), self.packet_id, self.packet_type)
-        return b"".join([header, self.body.encode('utf-8'), b"\x00\x00"])
