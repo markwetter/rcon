@@ -125,17 +125,15 @@ class RconServerHandler(socketserver.BaseRequestHandler):
             return False
 
     def exec_command(self, request_packet):
-        print(request_packet.body)
         request = request_packet.body.split()
         if not request:
             return ""
-        print(request)
         function = request.pop(0)
         if not function in self.server.funcs.keys():
             return "Unknown command: %s" % function
         (args, varargs, keywords, default) = inspect.getargspec(self.server.funcs[function])
         if not len(args) == len(request):
-            return "Command %s requires %s arguments, %s arguments given" % (function, len(args), len(request))
+            return "Command %s requires %s arguments: %s arguments given" % (function, len(args), len(request))
         return str(self.server.funcs[function](*request))
 
 
