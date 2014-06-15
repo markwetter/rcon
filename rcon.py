@@ -1,6 +1,10 @@
 # Copyright (c) 2014 Mark Wetter
 
-import socket, struct, itertools
+import socket
+import socketserver
+import threading
+import struct
+import itertools
 
 SERVERDATA_AUTH             = 3
 SERVERDATA_AUTH_RESPONSE    = 2
@@ -94,9 +98,30 @@ class RconClient(object):
 
 class RconServerHandler(socketserver.BaseRequestHandler):
     def handle(self):
+        auth = False
+        while True:
+            request_packet = RconPacket().recieve_from_socket(self.request)
+            if not request_packet:
+                break
+            if auth:
+                self.exec_command(request_packet)
+            else:
+                auth = self.authenticate(request_packet)
+
+    def authenticate(self, request_packet):
+        if (self.server.password and
+            request_packet.packet_type == SERVERDATA_AUTH and
+            request_packet.body == self.server.password):
+            RconPacket(request_packet.packet_id, SERVERDATA_RESPONSE_VALUE, '').send_to_socket(self.request)
+            RconPacket(request_packet.packet_id, SERVERDATA_AUTH_RESPONSE, '').send_to_socket(self.request)
+            return True
+        else:
+            RconPacket(-1, SERVERDATA_AUTH_RESPONSE, '').send_to_socket(self.request)
+            return False
+
+    def exec_command(self, request_packet):
         # Echo Stub
-        request_packet = RconPacket().recieve_from_socket(self.request.socket)
-        request_packet.send_to_socket(self.request.socket)
+        request_packet.send_to_socket(self.request)
 
 
 class RconServer(socketserver.ThreadingTCPServer):
