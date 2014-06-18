@@ -1,11 +1,10 @@
 # Copyright (c) 2014 Mark Wetter
 
-from . import RconClientError
-from .packet import RconPacket
-from .constants import (
-    SERVERDATA_AUTH, SERVERDATA_AUTH_RESPONSE,
-    SERVERDATA_EXECCOMMAND, SERVERDATA_RESPONSE_VALUE
+from . import (
+    SERVERDATA_AUTH, SERVERDATA_AUTH_RESPONSE, SERVERDATA_EXECCOMMAND,
+    SERVERDATA_RESPONSE_VALUE, RconClientError
 )
+from .packet import RconPacket
 import socket
 import itertools
 
