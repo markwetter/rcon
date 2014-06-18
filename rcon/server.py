@@ -1,14 +1,16 @@
 # Copyright (c) 2014 Mark Wetter
 
-from . import RconServerError
-from .packet import RconPacket
-from .constants import (
-    SERVERDATA_AUTH, SERVERDATA_AUTH_RESPONSE,
-    SERVERDATA_RESPONSE_VALUE
+from . import (
+    SERVERDATA_AUTH, SERVERDATA_AUTH_RESPONSE, SERVERDATA_EXECCOMMAND,
+    SERVERDATA_RESPONSE_VALUE, RconServerError
 )
-import socketserver
+from .packet import RconPacket
 import threading
 import inspect
+try:
+    import socketserver
+except ImportError:
+    import SocketServer as socketserver
 
 
 class RconServerHandler(socketserver.BaseRequestHandler):
