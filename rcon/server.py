@@ -55,8 +55,8 @@ class RconServerHandler(socketserver.BaseRequestHandler):
         """
 
         if (self.server.password and
-            request_packet.packet_type == SERVERDATA_AUTH and
-            request_packet.body == self.server.password):
+                request_packet.packet_type == SERVERDATA_AUTH and
+                request_packet.body == self.server.password):
             RconPacket(request_packet.packet_id, SERVERDATA_RESPONSE_VALUE, '').send_to_socket(self.request)
             RconPacket(request_packet.packet_id, SERVERDATA_AUTH_RESPONSE, '').send_to_socket(self.request)
             return True
@@ -77,7 +77,7 @@ class RconServerHandler(socketserver.BaseRequestHandler):
         function = request.pop(0)
         if not function in self.server.funcs.keys():
             return "Unknown command: %s" % function
-        (args, varargs, keywords, default) = inspect.getargspec(self.server.funcs[function])
+        args = inspect.getargspec(self.server.funcs[function])[0]
         if not len(args) == len(request):
             return "Command %s requires %s arguments: %s arguments given" % (function, len(args), len(request))
         return str(self.server.funcs[function](*request))
@@ -91,10 +91,11 @@ class RconServer(socketserver.ThreadingTCPServer):
     method for adding new elements to `self.funcs`
     """
 
-    def __init__(self, server_address=("localhost",27015), password=''):
+    def __init__(self, server_address=("localhost", 27015), password=''):
         socketserver.ThreadingTCPServer.__init__(self, server_address, RconServerHandler)
         self.password = password
         self.funcs = {}
+        self.server_thread = None
 
     def start(self):
         """Launches seperate thread to hold server loop"""
