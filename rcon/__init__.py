@@ -1,4 +1,9 @@
-# Copyright (c) 2014 Mark Wetter
+"""
+    rcon
+
+    :copyright: (c) 2014 Mark Wetter
+    :license: MIT, see LICENSE for more details
+"""
 
 __version__ = "0.0.1"
 
