@@ -6,7 +6,6 @@
 """
 
 from . import RconPacketError
-import socket
 import struct
 
 
@@ -30,22 +29,22 @@ class RconPacket(object):
         header = struct.pack('<3i', self.size(), self.packet_id, self.packet_type)
         return b"".join([header, self.body.encode('utf-8'), b"\x00\x00"])
 
-    def send_to_socket(self, socket):
+    def send_to_socket(self, sock):
         """Helper method for serializing packet to a socket."""
         if self.size() > 4096:
             raise RconPacketError('Packet size cannot exceed 4096 bytes')
-        socket.send(self.serialize())
+        sock.send(self.serialize())
 
-    def recieve_from_socket(self, socket):
+    def recieve_from_socket(self, sock):
         """Helper method for reading a packet from a socket."""
-        header = socket.recv(struct.calcsize('<3i'))
+        header = sock.recv(struct.calcsize('<3i'))
         if not header:
             return False
         (content_length, self.packet_id, self.packet_type) = struct.unpack('<3i', header)
         content_length = content_length - struct.calcsize('<2i')
         response_buffer = b''
         while len(response_buffer) < content_length:
-            response_buffer += socket.recv(content_length - len(response_buffer))
+            response_buffer += sock.recv(content_length - len(response_buffer))
         self.body = response_buffer.decode('utf-8').rstrip('\x00')
 
         return self
