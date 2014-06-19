@@ -1,4 +1,9 @@
-# Copyright (c) 2014 Mark Wetter
+"""
+    rcon.client
+
+    :copyright: (c) 2014 Mark Wetter
+    :license: MIT, see LICENSE for more details
+"""
 
 from . import (
     SERVERDATA_AUTH, SERVERDATA_AUTH_RESPONSE, SERVERDATA_EXECCOMMAND,
@@ -10,6 +15,8 @@ import itertools
 
 
 class RconClient(object):
+    """A client implementation for the Source RCON Protocol."""
+
     def __init__(self, host, port, password='', timeout=1.0):
         self.host = host
         self.port = port
@@ -18,15 +25,18 @@ class RconClient(object):
         self.authenticate(password)
 
     def send(self, packet):
+        """Send packet using `self.socket`."""
         packet.send_to_socket(self.socket)
 
     def recieve(self):
+        """Recieve packet from `self.socket`."""
         response_packet = RconPacket().recieve_from_socket(self.socket)
         if not response_packet:
             raise RconClientError("Remote server disconnected")
         return response_packet
 
     def authenticate(self, password):
+        """Attempt to authenticate against RCON server."""
         auth_packet = RconPacket(next(self.packet_id), SERVERDATA_AUTH, password)
         self.send(auth_packet)
         auth_response = self.recieve()
@@ -38,6 +48,7 @@ class RconClient(object):
             raise RconClientError('Server Response: Invalid Password')
 
     def exec_command(self, command):
+        """Send command to RCON server and return response as a string."""
         command_packet = RconPacket(next(self.packet_id), SERVERDATA_EXECCOMMAND, command)
         check_packet = RconPacket(next(self.packet_id), SERVERDATA_EXECCOMMAND, "")
         self.send(command_packet)
