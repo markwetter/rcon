@@ -23,3 +23,8 @@ class RconServerError(RconError):
 
 class RconPacketError(RconError):
     pass
+
+# Lazy evaluation
+def create_connection(host, port, password, timeout=1.0):
+    from . import client
+    return client.create_connection(host, port, password, timeout)

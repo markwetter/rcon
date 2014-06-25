@@ -17,12 +17,20 @@ import itertools
 class RconClient(object):
     """A client implementation for the Source RCON Protocol."""
 
-    def __init__(self, host, port, password='', timeout=1.0):
+    def __init__(self, host, port, timeout=1.0):
         self.host = host
         self.port = port
+        self.timeout = timeout
         self.packet_id = itertools.count(1)
-        self.socket = socket.create_connection((host, port), timeout)
-        self.authenticate(password)
+        self.socket = None
+
+    def connect(self):
+        """Create TCP connection"""
+        self.socket = socket.create_connection((self.host, self.port), self.timeout)
+
+    def disconnect(self):
+        """Close TCP connection"""
+        self.socket.close()
 
     def send(self, packet):
         """Send packet using `self.socket`."""
@@ -63,3 +71,10 @@ class RconClient(object):
             else:
                 raise RconClientError('Packet response ID: %s does not match request ID: %s' % (response.packet_id, command_packet.packet_id))
         return response_buffer
+
+
+def create_connection(host, port, password, timeout):
+    client = RconClient(host, port, timeout)
+    client.connect()
+    client.authenticate(password)
+    return client
